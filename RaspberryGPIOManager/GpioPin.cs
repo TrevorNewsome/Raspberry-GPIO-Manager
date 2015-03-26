@@ -8,7 +8,13 @@ namespace RaspberryGPIOManager
     {
         private const string GPIO_ROOT_DIR = "/sys/class/gpio/";
         private static List<Pin> _exported_pins = new List<Pin>();
+        private FileSystemWatcher _state_watcher;
         private bool _disposed;
+        
+        /// <summary>
+        /// Event raised when the value of the pin changes.
+        /// </summary>
+        public event EventHandler<GPIOState> ValueChanged;
 
         /// <summary>
         /// P1 GPIO pins
@@ -150,15 +156,23 @@ namespace RaspberryGPIOManager
             this.GPIOPin = gpioPin;
             this.Direction = direction;
             this.State = initialValue;
+            _state_watcher = new FileSystemWatcher();
+            _state_watcher.Path = String.Format("{0}gpio{1}/value", GPIO_ROOT_DIR, GPIOPin.ToString().Substring(4));
+            _state_watcher.Changed += new FileSystemEventHandler((object sender, FileSystemEventArgs e) => { OnValueChanged(); });
         }
 
+	protected virtual void OnValueChanged()
+	{
+	    if (ValueChanged != null)
+	        ValueChanged(this, this.State);
+	}
 
         /// <summary>
         /// Unexports the GPIO interface.
         /// </summary>
         public void Unexport()
         {
-		    if (!_disposed)
+	    if (!_disposed)
                 Dispose();
         }
 
@@ -174,7 +188,7 @@ namespace RaspberryGPIOManager
 
         ~GPIOPinDriver()
         {
-		    if (!_disposed)
+	    if (!_disposed)
                 Dispose();
         }
     }
